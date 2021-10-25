@@ -1,9 +1,13 @@
-import Cache from "../util/lru_cache";
+import Cache from "maplibre-gl/src/source/tile_cache";
 import assert from "assert";
-import Tile from "../source/tile";
+import Tile from "maplibre-gl/src/source/tile";
 import Point from "@mapbox/point-geometry";
-import EXTENT from "../data/extent";
+import EXTENT from "maplibre-gl/src/data/extent";
 import SphericalMercator from "@mapbox/sphericalmercator";
+import type { SourceSpecification } from "maplibre-gl/src/style-spec/types";
+import type Dispatcher from "maplibre-gl/src/util/dispatcher";
+import { create as createSource } from "maplibre-gl/src/source/source";
+import { Evented } from "maplibre-gl/src/util/evented";
 
 let sphericalMercator = new SphericalMercator();
 
@@ -19,15 +23,24 @@ const TILE_LOAD_TIMEOUT = 60 * 1000;
     + currentlyRenderingTiles - a list of tiles that we actually want to be able to paint
 */
 
-class BasicSourceCache {
+class BasicSourceCache extends Evented {
   _source;
   _tilesInUse = {}; // tileID.key => tile (note that tile's have a .uses counter)
   map = {};
   _tileCache;
   currentlyRenderingTiles;
 
-  constructor(source) {
-    this._source = source;
+  constructor(
+    id: string,
+    options: SourceSpecification,
+    dispatcher: Dispatcher
+  ) {
+    super();
+    this.id = id;
+    this.dispatcher = dispatcher;
+
+    this._source = createSource(id, options, dispatcher, this);
+
     this._tileCache = new Cache(TILE_CACHE_SIZE, (t) =>
       this._source.unloadTile(t)
     );

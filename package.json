@@ -2,7 +2,12 @@
   "name": "maplibre-basic-renderer",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.ts",
+  "dependencies": {
+    "maplibre-gl": "^2.0.0-pre.5",
+    "@mapbox/point-geometry": "^0.1.0",
+    "gl-matrix": "^3.2.1"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

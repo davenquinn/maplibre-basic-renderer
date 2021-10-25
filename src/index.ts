@@ -67,6 +67,7 @@ class BasicRenderer extends Evented {
       Object.assign({}, options.style, { transition: { duration: 0 } }),
       this
     );
+
     this._style.setEventedParent(this, { style: this._style });
     this._style.on("data", (e) => e.dataType === "style" && this._onReady());
     this._createGlContext();
@@ -78,6 +79,7 @@ class BasicRenderer extends Evented {
   }
 
   _onReady() {
+    debugger;
     this._style.update(new EvaluationParameters(16));
   }
 
@@ -211,6 +213,10 @@ class BasicRenderer extends Evented {
       layer &&
       layer._eventedParent.stylesheet.layers.find((x) => x.id === layer.id);
 
+    return Object.keys(this._style._layers);
+
+    // Get rid of filtering for now
+    /*
     return Object.keys(this._style._layers)
       .filter(
         (lyr) => this._style.getLayoutProperty(lyr, "visibility") === "visible"
@@ -229,6 +235,7 @@ class BasicRenderer extends Evented {
           (!source || (layerStylesheet && layerStylesheet.source === source))
         );
       });
+    */
   }
 
   getLayerOriginalFilter(layerName) {
@@ -292,6 +299,7 @@ class BasicRenderer extends Evented {
     // we define the origin as the minimum left and top values mentioned in tileSpec/drawSpec
     // and adjust all the top/left values to use this reference.  This cannonicalization means
     // we can spot tile sets that are the same except for a gobal translation.
+    console.log(tilesSpec, drawSpec);
 
     let minLeft = tilesSpec
       .map((s) => s.left)
@@ -363,7 +371,10 @@ class BasicRenderer extends Evented {
     // tilesSpec when appropriate. We don't re-do that filtering work here.
 
     // any requests that have the same tileSetID can be coallesced into a single _pendingRender
+
     ({ drawSpec, tilesSpec } = this._canonicalizeSpec(tilesSpec, drawSpec));
+    console.log("renderTiles", drawSpec, tilesSpec);
+
     let tileSetID = this._tileSpecToString(tilesSpec);
     let consumer = { ctx, drawSpec, tilesSpec, next };
 
@@ -387,20 +398,28 @@ class BasicRenderer extends Evented {
       renderId,
       tiles: tilesSpec.map((s) => {
         let tileID = new OverscaledTileID(s.z, 0, s.z, s.x, s.y);
+        console.log("creating tile", tileID);
         return this._style.sourceCaches[s.source].acquireTile(tileID, s.size); // includes .uses++
       }),
       consumers: [consumer],
     };
     this._pendingRenders.set(tileSetID, state);
 
+    console.log("Execute pending render");
     // once all the tiles are loaded we can then execute the pending render...
     let badTileIdxs = [];
     Promise.all(
       state.tiles.map((t, ii) =>
-        t.loadedPromise.catch((err) => badTileIdxs.push(ii))
+        t.loadedPromise.catch((err) => {
+          console.log("Found bad tile", t, err);
+          badTileIdxs.push(ii);
+        })
       )
     )
-      .catch((err) => this._finishRender(tileSetID, renderId, err)) // will delete the pendingRender so the next promise's initial check will fail
+      .catch((err) => {
+        console.log("Caught error!");
+        this._finishRender(tileSetID, renderId, err); // will delete the pendingRender so the next promise's initial check will fail
+      })
       .then(() => {
         state = this._pendingRenders.get(tileSetID);
         if (!state || state.renderId !== renderId) {
@@ -409,6 +428,9 @@ class BasicRenderer extends Evented {
         let err = badTileIdxs.length
           ? `${badTileIdxs.length} of ${tilesSpec.length} tiles not available`
           : null;
+
+        console.log("Starting to render tiles");
+        console.log(tilesSpec, badTileIdxs);
 
         // special case the condition where there are no tiles requested/available
         if (tilesSpec.length - badTileIdxs.length === 0) {
@@ -422,6 +444,7 @@ class BasicRenderer extends Evented {
             )
           );
           this._finishRender(tileSetID, renderId, err);
+          console.log("No tiles to render");
           return;
         }
 
@@ -454,6 +477,8 @@ class BasicRenderer extends Evented {
           .map((c) => c.drawSpec.srcTop + c.drawSpec.height)
           .reduce((a, b) => Math.max(a, b), -Infinity);
 
+        console.log("Still going");
+
         // iterate over OFFSCREEN_CANV_SIZE x OFFSCREEN_CANV_SIZE blocks of that bounding box
         for (let xx = xSrcMin; xx < xSrcMax; xx += OFFSCREEN_CANV_SIZE) {
           for (let yy = ySrcMin; yy < ySrcMax; yy += OFFSCREEN_CANV_SIZE) {
@@ -467,6 +492,8 @@ class BasicRenderer extends Evented {
                 c.drawSpec.srcTop + c.drawSpec.height > yy &&
                 c.drawSpec.srcTop < yy + OFFSCREEN_CANV_SIZE
             );
+
+            console.log(state.tiles);
             if (relevantConsumers.length === 0) {
               continue;
             }
@@ -485,6 +512,7 @@ class BasicRenderer extends Evented {
             // so we use the first tile's zoom level
             this._style.update(new EvaluationParameters(tilesSpec[0].z));
 
+            console.log("Prepping to render");
             // @ts-ignore
             this.painter.render(this._style, {
               showTileBoundaries: false,

@@ -1,7 +1,7 @@
 import Style from "maplibre-gl/src/style/style";
 import { create } from "maplibre-gl/src/source/source";
 import { Placement } from "maplibre-gl/src/symbol/placement";
-import SourceCache from "maplibre-gl/src/source/source_cache";
+import SourceCache from "./source_cache";
 
 export function preprocessStyle(style) {
   if (typeof style !== "object") return;
@@ -27,7 +27,7 @@ export function preprocessStyle(style) {
 
 class BasicStyle extends Style {
   loadedPromise: Promise<void>;
-  sourceCaches: any;
+  sourceCaches: any = {};
   constructor(stylesheet: any, map: any, options: any = {}) {
     super(map, options);
     this.loadedPromise = new Promise((res) =>
