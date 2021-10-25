@@ -1,4 +1,4 @@
-import Painter from "../render/painter";
+import Painter from "maplibre-gl/src/render/painter";
 
 var layerStylesheetFromLayer = (layer) =>
   layer &&

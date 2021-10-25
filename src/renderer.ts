@@ -1,16 +1,16 @@
 import BasicPainter from "./painter";
 import BasicStyle from "./style";
-import EXTENT from "../data/extent";
-import { Evented } from "../util/evented";
-import { OverscaledTileID } from "../source/tile_id";
+import EXTENT from "maplibre-gl/src/data/extent";
+import { Evented } from "maplibre-gl/src/util/evented";
+import { OverscaledTileID } from "maplibre-gl/src/source/tile_id";
 import { mat4 } from "gl-matrix";
-import { Source } from "../source/source";
-import {queryRenderedFeatures} from "../source/query_features";
-import EvaluationParameters from "../style/evaluation_parameters";
-import { Placement } from "../symbol/placement";
+import { Source } from "maplibre-gl/src/source/source";
+import { queryRenderedFeatures } from "maplibre-gl/src/source/query_features";
+import EvaluationParameters from "maplibre-gl/src/style/evaluation_parameters";
+import { Placement } from "maplibre-gl/src/symbol/placement";
 import assert from "assert";
 import { preprocessStyle } from "./style";
-import isSupported from "@mapbox/mapbox-gl-supported"
+import isSupported from "@mapbox/mapbox-gl-supported";
 
 const DEFAULT_RESOLUTION = 256;
 const OFFSCREEN_CANV_SIZE = 1024;

@@ -1,7 +1,7 @@
-import Style from "../style/style";
-import { create } from "../source/source";
-import { Placement } from "../symbol/placement";
-import SourceCache from "../source/source_cache";
+import Style from "maplibre-gl/src/style/style";
+import { create } from "maplibre-gl/src/source/source";
+import { Placement } from "maplibre-gl/src/symbol/placement";
+import SourceCache from "maplibre-gl/src/source/source_cache";
 
 export function preprocessStyle(style) {
   if (typeof style !== "object") return;
@@ -24,7 +24,6 @@ export function preprocessStyle(style) {
     return l.type !== "raster" && l.type !== "background";
   });
 }
-
 
 class BasicStyle extends Style {
   loadedPromise: Promise<void>;
