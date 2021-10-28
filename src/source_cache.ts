@@ -58,17 +58,23 @@ class BasicSourceCache extends Evented {
     // important: every call to acquireTile should be paired with a call to releaseTile
     // you can also manually increment tile.uses, however do not decrement it directly, instead
     // call releaseTile.
-    let tile =
-      this._tilesInUse[tileID.key] ||
-      this._tileCache.getAndRemove(tileID.key) ||
-      new Tile(tileID.wrapped(), size, tileID.canonical.z);
+
+    console.log("acquireTile", tileID);
+
+    // let tile =
+    //   this._tilesInUse[tileID.key] ||
+    //   this._tileCache.getAndRemove(tileID.key) ||
+    let tile = new Tile(tileID.wrapped(), size, tileID.canonical.z);
     tile.uses++;
     this._tilesInUse[tileID.key] = tile;
+    console.log("Got tile", tile);
 
     tile.cache = this; // redundant if tile is not new
     if (tile.loadedPromise) {
       return tile;
     }
+
+    console.log(tile);
 
     // We need to actually issue the load request, and express it as a promise...
     tile.loadedPromise = new Promise((res, rej) => {
@@ -79,8 +85,10 @@ class BasicSourceCache extends Evented {
         rej("timeout");
       }, TILE_LOAD_TIMEOUT);
       this._source.loadTile(tile, (err) => {
+        console.log("loaded tile", tile);
         clearTimeout(timeout);
         if (err) {
+          console.error(err);
           tile._isDud = true; // we can consider it to "have data", i.e. we will let it go into the cache
           rej(err);
         } else {
@@ -165,6 +173,13 @@ class BasicSourceCache extends Evented {
   reload() {}
   pause() {}
   resume() {}
+  onAdd(map: Map) {
+    this.map = map;
+    this._maxTileCacheSize = map ? map._maxTileCacheSize : null;
+    if (this._source && this._source.onAdd) {
+      this._source.onAdd(map);
+    }
+  }
 }
 
 export default BasicSourceCache;

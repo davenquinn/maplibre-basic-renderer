@@ -11,6 +11,7 @@ import { Placement } from "maplibre-gl/src/symbol/placement";
 import assert from "assert";
 import { preprocessStyle } from "./style";
 import isSupported from "@mapbox/mapbox-gl-supported";
+import { RequestManager } from "maplibre-gl-js/src/util/request_manager";
 
 const DEFAULT_RESOLUTION = 256;
 const OFFSCREEN_CANV_SIZE = 1024;
@@ -29,9 +30,11 @@ class BasicRenderer extends Evented {
   _tmpMat4f64: Float64Array;
   _tmpMat4f32: Float32Array;
   _gl: RenderingContext;
+  _requestManager: RequestManager;
 
   constructor(options) {
     super();
+    this._requestManager = new RequestManager(options.transformRequest);
     this._canvas = document.createElement("canvas");
     this._canvas.style.imageRendering = "pixelated";
     this._canvas.addEventListener(
@@ -79,7 +82,6 @@ class BasicRenderer extends Evented {
   }
 
   _onReady() {
-    debugger;
     this._style.update(new EvaluationParameters(16));
   }
 
@@ -421,6 +423,7 @@ class BasicRenderer extends Evented {
         this._finishRender(tileSetID, renderId, err); // will delete the pendingRender so the next promise's initial check will fail
       })
       .then(() => {
+        console.log("Handler");
         state = this._pendingRenders.get(tileSetID);
         if (!state || state.renderId !== renderId) {
           return; // render for this tileGroupID has been canceled, or superceded.
