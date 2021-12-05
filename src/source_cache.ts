@@ -8,6 +8,7 @@ import type { SourceSpecification } from "maplibre-gl/src/style-spec/types";
 import type Dispatcher from "maplibre-gl/src/util/dispatcher";
 import { create as createSource } from "maplibre-gl/src/source/source";
 import { Evented } from "maplibre-gl/src/util/evented";
+//import SourceCache from "maplibre-gl-js/src/source/source_cache";
 
 let sphericalMercator = new SphericalMercator();
 
@@ -23,12 +24,21 @@ const TILE_LOAD_TIMEOUT = 60 * 1000;
     + currentlyRenderingTiles - a list of tiles that we actually want to be able to paint
 */
 
+interface ExtTile extends Tile {
+  cache: any;
+  loadedPromise: Promise<void>;
+  _isDud: boolean;
+}
+
 class BasicSourceCache extends Evented {
   _source;
   _tilesInUse = {}; // tileID.key => tile (note that tile's have a .uses counter)
   map = {};
   _tileCache;
   currentlyRenderingTiles;
+  _maxTileCacheSize: number;
+  dispatcher: any;
+  id: string;
 
   constructor(
     id: string,
@@ -54,7 +64,7 @@ class BasicSourceCache extends Evented {
   getRenderableIds() {
     return this.getVisibleCoordinates();
   }
-  acquireTile(tileID, size) {
+  acquireTile(tileID: any, size) {
     // important: every call to acquireTile should be paired with a call to releaseTile
     // you can also manually increment tile.uses, however do not decrement it directly, instead
     // call releaseTile.
@@ -64,7 +74,8 @@ class BasicSourceCache extends Evented {
     // let tile =
     //   this._tilesInUse[tileID.key] ||
     //   this._tileCache.getAndRemove(tileID.key) ||
-    let tile = new Tile(tileID.wrapped(), size, tileID.canonical.z);
+    // @ts-ignore
+    let tile = new Tile(tileID.wrapped(), size, tileID.canonical.z) as ExtTile;
     tile.uses++;
     this._tilesInUse[tileID.key] = tile;
     console.log("Got tile", tile);
@@ -73,8 +84,6 @@ class BasicSourceCache extends Evented {
     if (tile.loadedPromise) {
       return tile;
     }
-
-    console.log(tile);
 
     // We need to actually issue the load request, and express it as a promise...
     tile.loadedPromise = new Promise((res, rej) => {
@@ -118,7 +127,7 @@ class BasicSourceCache extends Evented {
       return;
     }
     delete this._tilesInUse[tile.tileID.key];
-    if (tile.hasData() || this._isDud) {
+    if (tile.hasData() || tile._isDud) {
       // this tile is worth keeping...
       this._tileCache.add(tile.tileID.key, tile);
     } else {
@@ -128,14 +137,24 @@ class BasicSourceCache extends Evented {
     }
   }
 
+  loaded() {
+    if (!this._source.loaded()) {
+      return false;
+    }
+    if (Object.keys(this._tilesInUse).length > 0) {
+      return false;
+    }
+    return true;
+  }
+
   invalidateAllLoadedTiles() {
     // this needs to be called on all changes: style, layers visible, resolution (i.e. zoom)
     // by removing the loadedPromise, we force a fresh load next time the tile
     // is needed...although note that "fresh" is only partial because the rawData
     // is still available.
-    Object.values(this._tilesInUse).forEach(
-      (t) => !t._isDud && (t.loadedPromise = null)
-    );
+    Object.values(this._tilesInUse).forEach((t: ExtTile) => {
+      return !t._isDud && (t.loadedPromise = null);
+    });
     this._tileCache.keys().forEach((id) => {
       let tile = this._tileCache.get(id);
       !tile._isDud && (tile.loadedPromise = null);
@@ -153,8 +172,8 @@ class BasicSourceCache extends Evented {
     let pointY = pointXY[1];
 
     return Object.values(this._tilesInUse)
-      .filter((t) => t.hasData()) // we are a bit lazy in terms of ensuring the data matches the rendered styles etc. ..could check loadedPromise has resolved
-      .map((t) => ({
+      .filter((t: ExtTile) => t.hasData()) // we are a bit lazy in terms of ensuring the data matches the rendered styles etc. ..could check loadedPromise has resolved
+      .map((t: ExtTile) => ({
         tile: t,
         tileID: t.tileID,
         queryGeometry: [
@@ -173,8 +192,9 @@ class BasicSourceCache extends Evented {
   reload() {}
   pause() {}
   resume() {}
-  onAdd(map: Map) {
+  onAdd(map: Map<any, any>) {
     this.map = map;
+    // @ts-ignore
     this._maxTileCacheSize = map ? map._maxTileCacheSize : null;
     if (this._source && this._source.onAdd) {
       this._source.onAdd(map);

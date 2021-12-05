@@ -1,5 +1,4 @@
 import BasicPainter from "./painter";
-import BasicStyle from "./style";
 import EXTENT from "maplibre-gl/src/data/extent";
 import { Evented } from "maplibre-gl/src/util/evented";
 import { OverscaledTileID } from "maplibre-gl/src/source/tile_id";
@@ -9,7 +8,7 @@ import { queryRenderedFeatures } from "maplibre-gl/src/source/query_features";
 import EvaluationParameters from "maplibre-gl/src/style/evaluation_parameters";
 import { Placement } from "maplibre-gl/src/symbol/placement";
 import assert from "assert";
-import { preprocessStyle } from "./style";
+import BasicStyle, { preprocessStyle } from "./style";
 import isSupported from "@mapbox/mapbox-gl-supported";
 import { RequestManager } from "maplibre-gl-js/src/util/request_manager";
 
@@ -66,13 +65,14 @@ class BasicRenderer extends Evented {
     };
     preprocessStyle(options.style);
     this._initStyle = options.style;
-    this._style = new BasicStyle(
-      Object.assign({}, options.style, { transition: { duration: 0 } }),
-      this
-    );
+    // transition: { duration: 0 }
+    const s1 = Object.assign({}, options.style, {});
+    console.log(s1);
+    this._style = new BasicStyle(s1, this);
+    console.log(this._style);
 
     this._style.setEventedParent(this, { style: this._style });
-    this._style.on("data", (e) => e.dataType === "style" && this._onReady());
+    this._style.on("style.load", (e) => this._onReady());
     this._createGlContext();
     this.painter.resize(OFFSCREEN_CANV_SIZE, OFFSCREEN_CANV_SIZE);
     this._pendingRenders = new Map(); // tileSetID => render state
@@ -82,6 +82,11 @@ class BasicRenderer extends Evented {
   }
 
   _onReady() {
+    // for (const layer of Object.values(this._style._layers)) {
+    //   layer._transitionablePaint = new Transitionable(layer.properties.paint);
+    //   layer._transitioningPaint = layer._transitionablePaint.untransitioned();
+    // }
+    console.log("Began updating styles");
     this._style.update(new EvaluationParameters(16));
   }
 

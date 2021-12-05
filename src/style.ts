@@ -33,7 +33,7 @@ class BasicStyle extends Style {
     super(map, options);
 
     this.loadedPromise = new Promise((res) =>
-      this.on("data", (e) => e.dataType === "style" && res())
+      this.on("style.load", (e) => res())
     );
     this.loadedPromise.then(() => {
       this.placement = new Placement(map.transform, 0, true);
