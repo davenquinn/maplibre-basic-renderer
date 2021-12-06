@@ -1,7 +1,5 @@
-import Style from "maplibre-gl/src/style/style";
-import { create } from "maplibre-gl/src/source/source";
+import { Style } from "maplibre-gl/src";
 import { Placement } from "maplibre-gl/src/symbol/placement";
-import { validateStyle } from "maplibre-gl/src/style/validate_style";
 import SourceCache from "./source_cache";
 
 export function preprocessStyle(style) {
